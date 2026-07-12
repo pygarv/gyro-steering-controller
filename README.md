@@ -8,6 +8,8 @@ kernel drivers.
 Built for Forza and F1, but works with any racing/driving title on xCloud
 since it doesn't touch anything game-specific.
 
+![Phone controller](assets/phone-controller.png)
+
 ## How it works
 
 xCloud reads controller input via the standard browser [Gamepad
