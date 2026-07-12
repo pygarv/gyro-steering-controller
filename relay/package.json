@@ -1,0 +1,13 @@
+{
+  "name": "gyro-steering-relay",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "fake-phone": "node fake-phone.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

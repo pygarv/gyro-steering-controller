@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Gyro Steering for xCloud",
+  "version": "0.2.0",
+  "description": "Steers xCloud racing games using a phone's gyroscope, streamed through a local relay.",
+  "host_permissions": ["ws://localhost:8765/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.xbox.com/*/play", "https://www.xbox.com/*/play/*"],
+      "js": ["inject.js"],
+      "world": "MAIN",
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["https://www.xbox.com/*/play", "https://www.xbox.com/*/play/*"],
+      "js": ["bridge.js"],
+      "run_at": "document_start"
+    }
+  ]
+}

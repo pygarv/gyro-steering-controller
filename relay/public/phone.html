@@ -1,0 +1,482 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>Racing Controller</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      touch-action: none;
+    }
+    body {
+      background: #0b0d10;
+      color: #eee;
+      font-family: -apple-system, system-ui, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    #setup {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+    }
+    #status { font-size: 14px; opacity: 0.6; }
+    button {
+      font-size: 16px;
+      padding: 12px 24px;
+      border-radius: 12px;
+      border: none;
+      background: #2d7dfa;
+      color: white;
+    }
+    #sensitivity { width: 60%; }
+    label { font-size: 13px; opacity: 0.8; }
+    .row { display: flex; gap: 12px; align-items: center; }
+
+    #controls {
+      display: none;
+      position: fixed;
+      inset: 0;
+    }
+
+    /* --- Pedals: full-height glass zones, brake/gas gradient tint --- */
+    .pedal {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 34%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.55);
+      padding-bottom: 8px;
+      box-sizing: border-box;
+      touch-action: none;
+    }
+    #brake { left: 0; background: linear-gradient(90deg, rgba(220, 40, 40, 0.16), transparent); }
+    #gas { right: 0; background: linear-gradient(270deg, rgba(40, 200, 90, 0.16), transparent); }
+    .fill {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      background: rgba(255, 255, 255, 0.14);
+      transition: height 0.03s linear;
+    }
+
+    /* --- Shift paddles, top corners --- */
+    .shift {
+      position: absolute;
+      top: 10px;
+      width: 64px;
+      height: 52px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.75);
+      touch-action: none;
+    }
+    #shiftDown { left: 10px; }
+    #shiftUp { right: 10px; }
+
+    /* --- Top-center pill row: View / gear / Menu --- */
+    #topRow {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .pill {
+      width: 52px;
+      height: 30px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: rgba(255, 255, 255, 0.6);
+      touch-action: none;
+    }
+    #gear {
+      width: 34px;
+      height: 30px;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+      touch-action: none;
+    }
+
+    /* --- Tilt indicator: bubble-level style, dead center --- */
+    #tiltRing {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 76px;
+      height: 76px;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.03);
+      pointer-events: none;
+    }
+    #tiltDot {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 14px;
+      height: 14px;
+      margin-left: -7px;
+      margin-top: -7px;
+      border-radius: 50%;
+      background: #4fd1ff;
+      box-shadow: 0 0 8px #4fd1ff;
+      transition: transform 0.03s linear;
+    }
+
+    /* --- D-pad, bottom-left corner (over brake pedal) --- */
+    #dpad {
+      position: absolute;
+      left: 16px;
+      bottom: 16px;
+      width: 116px;
+      height: 116px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      gap: 3px;
+    }
+    .dpad-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.7);
+      touch-action: none;
+    }
+    #dpadUp { grid-column: 2; grid-row: 1; }
+    #dpadLeft { grid-column: 1; grid-row: 2; }
+    #dpadRight { grid-column: 3; grid-row: 2; }
+    #dpadDown { grid-column: 2; grid-row: 3; }
+
+    /* --- ABXY diamond, bottom-right corner (over gas pedal), Xbox colors --- */
+    #diamond {
+      position: absolute;
+      right: 16px;
+      bottom: 16px;
+      width: 116px;
+      height: 116px;
+    }
+    .face-btn {
+      position: absolute;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      font-weight: 800;
+      color: rgba(0, 0, 0, 0.75);
+      touch-action: none;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+    }
+    #btnY { top: 0; left: 35px; background: #f2c94c; }
+    #btnX { top: 35px; left: 0; background: #4f9dff; }
+    #btnB { top: 35px; left: 70px; background: #e84142; color: rgba(255, 255, 255, 0.9); }
+    #btnA { top: 70px; left: 35px; background: #3ac162; }
+
+    .active { filter: brightness(1.6); background: rgba(255, 255, 255, 0.25) !important; }
+  </style>
+</head>
+<body>
+  <div id="setup">
+    <div id="status">connecting...</div>
+    <button id="permBtn" style="display:none">Enable Motion Sensors</button>
+    <div class="row">
+      <label><input type="radio" name="mode" value="assist" checked /> Assist Player 1's real controller</label>
+    </div>
+    <div class="row">
+      <label><input type="radio" name="mode" value="player" /> Play as a separate player, slot #</label>
+      <input type="number" id="slotInput" min="1" max="4" value="2" style="width: 50px" />
+    </div>
+    <div class="row">
+      <button id="calibrate">Center / Calibrate</button>
+    </div>
+    <label>Sensitivity: <span id="sensVal">1.0</span>x</label>
+    <input type="range" id="sensitivity" min="0.3" max="3" step="0.1" value="1" />
+    <button id="fullscreenBtn">Go Fullscreen (Landscape) & Start</button>
+  </div>
+
+  <div id="controls">
+    <div id="brake" class="pedal"><div class="fill" id="brakeFill"></div>BRAKE</div>
+    <div id="gas" class="pedal"><div class="fill" id="gasFill"></div>GAS</div>
+
+    <div id="shiftDown" class="shift">LB</div>
+    <div id="shiftUp" class="shift">RB</div>
+
+    <div id="topRow">
+      <div id="viewBtn" class="pill">VIEW</div>
+      <div id="gear">⚙</div>
+      <div id="menuBtn" class="pill">MENU</div>
+    </div>
+
+    <div id="tiltRing"><div id="tiltDot"></div></div>
+
+    <div id="dpad">
+      <div id="dpadUp" class="dpad-btn">▲</div>
+      <div id="dpadLeft" class="dpad-btn">◀</div>
+      <div id="dpadRight" class="dpad-btn">▶</div>
+      <div id="dpadDown" class="dpad-btn">▼</div>
+    </div>
+
+    <div id="diamond">
+      <div id="btnY" class="face-btn">Y</div>
+      <div id="btnX" class="face-btn">X</div>
+      <div id="btnB" class="face-btn">B</div>
+      <div id="btnA" class="face-btn">A</div>
+    </div>
+  </div>
+
+  <script>
+    const statusEl = document.getElementById("status");
+    const sensSlider = document.getElementById("sensitivity");
+    const sensVal = document.getElementById("sensVal");
+    const permBtn = document.getElementById("permBtn");
+    const calibrateBtn = document.getElementById("calibrate");
+    const fullscreenBtn = document.getElementById("fullscreenBtn");
+    const setupEl = document.getElementById("setup");
+    const controlsEl = document.getElementById("controls");
+    const gearBtn = document.getElementById("gear");
+    const tiltDot = document.getElementById("tiltDot");
+
+    let sensitivity = 1.0;
+    let centerOffset = 0;
+    let centerOffsetPitch = 0;
+    let lastRaw = 0;
+    let lastRawPitch = 0;
+
+    const clientId = Math.random().toString(36).slice(2);
+    const slotInput = document.getElementById("slotInput");
+    const modeRadios = document.querySelectorAll('input[name="mode"]');
+
+    const state = {
+      clientId,
+      mode: "assist",
+      slot: 2,
+      steering: 0,
+      steeringY: 0,
+      throttle: 0,
+      brake: 0,
+      a: false,
+      b: false,
+      x: false,
+      y: false,
+      lb: false,
+      rb: false,
+      view: false,
+      start: false,
+      dpadUp: false,
+      dpadDown: false,
+      dpadLeft: false,
+      dpadRight: false,
+    };
+
+    modeRadios.forEach((r) => r.addEventListener("change", () => {
+      state.mode = document.querySelector('input[name="mode"]:checked').value;
+    }));
+    slotInput.addEventListener("input", () => {
+      state.slot = Number.parseInt(slotInput.value, 10);
+    });
+
+    const proto = location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${proto}//${location.host}`);
+    ws.onopen = () => (statusEl.textContent = "connected to relay");
+    ws.onclose = () => (statusEl.textContent = "disconnected — reload page");
+    ws.onerror = () => (statusEl.textContent = "connection error");
+
+    function sendState() {
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(state));
+    }
+
+    sensSlider.addEventListener("input", () => {
+      sensitivity = Number.parseFloat(sensSlider.value);
+      sensVal.textContent = sensitivity.toFixed(1);
+    });
+
+    calibrateBtn.addEventListener("click", () => {
+      centerOffset = lastRaw;
+      centerOffsetPitch = lastRawPitch;
+    });
+
+    fullscreenBtn.addEventListener("click", async () => {
+      try {
+        await document.documentElement.requestFullscreen();
+        await screen.orientation.lock("landscape");
+      } catch (err) {
+        statusEl.textContent = "fullscreen/lock failed: " + err.message;
+      }
+      setupEl.style.display = "none";
+      controlsEl.style.display = "block";
+    });
+
+    gearBtn.addEventListener("click", () => {
+      controlsEl.style.display = "none";
+      setupEl.style.display = "flex";
+    });
+
+    // --- Steering (gyro, both axes) ---
+    const MAX_TILT_DEG = 45;
+    const TILT_RING_RADIUS = 25; // px the dot can travel from center
+
+    function clamp(v, lo, hi) {
+      return Math.max(lo, Math.min(hi, v));
+    }
+
+    // roll = left/right tilt (steering, axis X), pitch = forward/back tilt
+    // (axis Y) — which raw sensor field maps to which swaps with physical
+    // landscape orientation.
+    function rawAxesDeg(event) {
+      const angle = screen.orientation ? screen.orientation.angle : 0;
+      switch (angle) {
+        case 90:
+          return { roll: -event.beta, pitch: event.gamma };
+        case 270:
+        case -90:
+          return { roll: event.beta, pitch: -event.gamma };
+        case 180:
+          return { roll: -event.gamma, pitch: -event.beta };
+        default:
+          return { roll: event.gamma, pitch: event.beta };
+      }
+    }
+
+    function handleOrientation(event) {
+      if (event.beta === null || event.gamma === null) return;
+      const { roll, pitch } = rawAxesDeg(event);
+      lastRaw = roll;
+      lastRawPitch = pitch;
+      const tiltRoll = lastRaw - centerOffset;
+      const tiltPitch = lastRawPitch - centerOffsetPitch;
+      state.steering = clamp((-tiltRoll / MAX_TILT_DEG) * sensitivity, -1, 1);
+      state.steeringY = clamp((tiltPitch / MAX_TILT_DEG) * sensitivity, -1, 1);
+      tiltDot.style.transform = `translate(${state.steering * TILT_RING_RADIUS}px, ${-state.steeringY * TILT_RING_RADIUS}px)`;
+      sendState();
+    }
+
+    let gotOrientationEvent = false;
+    function startListening() {
+      window.addEventListener("deviceorientation", (event) => {
+        gotOrientationEvent = true;
+        handleOrientation(event);
+      });
+      setTimeout(() => {
+        if (!gotOrientationEvent) {
+          statusEl.textContent = "no gyro data! check chrome://flags insecure-origin exception, or reload";
+        }
+      }, 2000);
+    }
+
+    if (typeof DeviceOrientationEvent !== "undefined" && typeof DeviceOrientationEvent.requestPermission === "function") {
+      permBtn.style.display = "inline-block";
+      permBtn.addEventListener("click", async () => {
+        const result = await DeviceOrientationEvent.requestPermission();
+        if (result === "granted") {
+          permBtn.style.display = "none";
+          startListening();
+        }
+      });
+    } else {
+      startListening();
+    }
+
+    // --- Analog pedals (drag up within zone = more value) ---
+    // Padded so full 0/1 is reachable without touching the literal screen
+    // edge (hard to reach precisely, especially near notches/corners).
+    const PEDAL_PAD = 0.12;
+    function setupPedal(zoneEl, fillEl, key) {
+      function update(clientY) {
+        const rect = zoneEl.getBoundingClientRect();
+        const usableTop = rect.top + rect.height * PEDAL_PAD;
+        const usableHeight = rect.height * (1 - 2 * PEDAL_PAD);
+        const v = clamp(1 - (clientY - usableTop) / usableHeight, 0, 1);
+        state[key] = v;
+        fillEl.style.height = `${v * 100}%`;
+        sendState();
+      }
+      zoneEl.addEventListener("pointerdown", (e) => {
+        zoneEl.setPointerCapture(e.pointerId);
+        update(e.clientY);
+      });
+      zoneEl.addEventListener("pointermove", (e) => {
+        if (e.pressure === 0 && e.buttons === 0 && !zoneEl.hasPointerCapture(e.pointerId)) return;
+        update(e.clientY);
+      });
+      function release() {
+        state[key] = 0;
+        fillEl.style.height = "0%";
+        sendState();
+      }
+      zoneEl.addEventListener("pointerup", release);
+      zoneEl.addEventListener("pointercancel", release);
+    }
+
+    setupPedal(document.getElementById("brake"), document.getElementById("brakeFill"), "brake");
+    setupPedal(document.getElementById("gas"), document.getElementById("gasFill"), "throttle");
+
+    // --- Momentary buttons (shift paddles, face buttons, d-pad, view/menu) ---
+    function setupButton(el, key) {
+      el.addEventListener("pointerdown", (e) => {
+        el.setPointerCapture(e.pointerId);
+        el.classList.add("active");
+        state[key] = true;
+        sendState();
+      });
+      function release() {
+        el.classList.remove("active");
+        state[key] = false;
+        sendState();
+      }
+      el.addEventListener("pointerup", release);
+      el.addEventListener("pointercancel", release);
+    }
+
+    setupButton(document.getElementById("shiftDown"), "lb");
+    setupButton(document.getElementById("shiftUp"), "rb");
+    setupButton(document.getElementById("btnA"), "a");
+    setupButton(document.getElementById("btnB"), "b");
+    setupButton(document.getElementById("btnX"), "x");
+    setupButton(document.getElementById("btnY"), "y");
+    setupButton(document.getElementById("viewBtn"), "view");
+    setupButton(document.getElementById("menuBtn"), "start");
+    setupButton(document.getElementById("dpadUp"), "dpadUp");
+    setupButton(document.getElementById("dpadDown"), "dpadDown");
+    setupButton(document.getElementById("dpadLeft"), "dpadLeft");
+    setupButton(document.getElementById("dpadRight"), "dpadRight");
+  </script>
+</body>
+</html>
