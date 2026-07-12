@@ -1,3 +1,5 @@
+i needed it so i built it. thanks to claude :)
+
 # Gyro Steering Controller for Xbox Cloud Gaming
 
 Turn your phone into a racing wheel (and a full controller) for Xbox Cloud
